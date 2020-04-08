@@ -218,11 +218,11 @@ conn=MongoClient('127.0.0.1', 27017)
 #根据关键字获取所有微博(包含评论、转发数据)
 #db= conn.WeiBo
 #get_hotinfo_by_key('国双')
-with open('e.csv','w',newline='',encoding = 'utf-8-sig')as f:
+with open('e2.csv','w',newline='',encoding = 'utf-8-sig')as f:
     f_csv = csv.writer(f)
     header = ['mid','用户名','发文时间','内容','转发数','评论数','点赞数']
     f_csv.writerow(header)
-    date = datetime.datetime(2020,4,2)
+    date = datetime.datetime(2019,12,31)
     times = 200
     while times:
         next = 1
@@ -230,9 +230,9 @@ with open('e.csv','w',newline='',encoding = 'utf-8-sig')as f:
         while next:
             if next % 10 == 0:
                 time.sleep(1)
-            url = 'https://s.weibo.com/weibo?q=%23%20%E6%84%9F%E8%B0%A2%20%E6%9C%89%E4%BD%A0%23&typeall=1&suball=1&timescope=custom:{}:{}&Refer=g&page={}'.format(date.strftime("%Y-%m-%d"),date.strftime("%Y-%m-%d"),next)
+            url = 'https://s.weibo.com/weibo?q=每日鲜语&wvr=6&b=1&timescope=custom:{}:{}&Refer=SWeibo_box&page={}'.format(date.strftime("%Y-%m-%d"),date.strftime("%Y-%m-%d"),next)
             headers = {
-                'Cookie': 'SINAGLOBAL=2023608972231.7717.1496907595436; login_sid_t=93b0b690122dc1de825fee0a7126e8a5; cross_origin_proto=SSL; _s_tentry=www.baidu.com; UOR=,,www.baidu.com; Apache=4873680493956.653.1585816475443; ULV=1585816475448:46:1:1:4873680493956.653.1585816475443:1583201859494; WBStorage=42212210b087ca50|undefined; WBtopGlobal_register_version=3d5b6de7399dfbdb; SCF=AmQ19DuoUQIpk7PYyXKk8DLtdiXZHKpe3fpjJF7CgfmBdposupje7xmpw3VedX_vA23gFg3oxW8DV4FNlxHDp_g.; SUB=_2A25zgdQTDeRhGedG6VQW9C3LzzuIHXVQ90LbrDV8PUNbmtAfLUqikW9NUUfuowb5eUnJo7wy6h1ABg6Es3lJUl_U; SUBP=0033WrSXqPxfM725Ws9jqgMF55529P9D9W5s8U2iDC9J14FjdmjTf4zk5JpX5KzhUgL.Fo2ReoqNSheNShM2dJLoIEnLxKqL1h5LB-2LxKML1K.L12eLxKqL1hzLBKeLxKnL1h5L1hHkxGL_; SUHB=0jBJFWt5KCHJqg; ALF=1617352642; SSOLoginState=1585816643',
+                'Cookie': 'SINAGLOBAL=2023608972231.7717.1496907595436; SUBP=0033WrSXqPxfM725Ws9jqgMF55529P9D9W5s8U2iDC9J14FjdmjTf4zk5JpX5KMhUgL.Fo2ReoqNSheNShM2dJLoIEnLxKqL1h5LB-2LxKML1K.L12eLxKqL1hzLBKeLxKnL1h5L1hHkxGL_; ALF=1614737852; SSOLoginState=1583201854; SCF=AmQ19DuoUQIpk7PYyXKk8DLtdiXZHKpe3fpjJF7CgfmBTC0P9LR0m_cJBcxuw1msLr2Yv3tgfM3v3_yFaIIWKz4.; SUB=_2A25zWc4QDeRhGedG6VQW9C3LzzuIHXVQLrjYrDV8PUNbmtAfLWujkW9NUUfuo5NbSTR4ZqhrYTa0Z7rv4eRpMstE; SUHB=0y0YAvgqI9wS3i; wvr=6; _s_tentry=login.sina.com.cn; UOR=,,login.sina.com.cn; Apache=5524618420115.63.1583201859487; ULV=1583201859494:45:2:2:5524618420115.63.1583201859487:1583132993917; webim_unReadCount=%7B%22time%22%3A1583201891780%2C%22dm_pub_total%22%3A0%2C%22chat_group_client%22%3A0%2C%22allcountNum%22%3A0%2C%22msgbox%22%3A0%7D; WBStorage=42212210b087ca50|undefined',
                 'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.122 Safari/537.36',
             }
             while True:
@@ -245,7 +245,6 @@ with open('e.csv','w',newline='',encoding = 'utf-8-sig')as f:
                         break
                 except:
                     print(url)
-                    print(r.text)
                     ip = get_new_ip()
                     time.sleep(5)
             print('#######' + str(next) + '  ' + str(len(weiboList)))
