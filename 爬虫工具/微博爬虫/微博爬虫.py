@@ -11,6 +11,78 @@ import csv
 import random
 import time
 
+def get_weibo_by_key_time(key,beginDate,endDate,gap,cookie):
+    ip = get_new_ip()
+    print('begin ' + key)
+    with open(key+'.csv','w',newline='',encoding = 'utf-8-sig')as f:
+        f_csv = csv.writer(f)
+        header = ['mid','用户名','发文时间','内容','转发数','评论数','点赞数']
+        f_csv.writerow(header)
+        endDate += datetime.timedelta(days=1)
+        while beginDate < endDate:
+            date = beginDate + datetime.timedelta(days=gap-1)
+            if date >= endDate:
+                date = endDate + datetime.timedelta(days=-1)
+            next = 1
+            print('from ' + beginDate.strftime("%Y-%m-%d")+' to '+date.strftime("%Y-%m-%d"))
+            while next:
+                if next % 10 == 0:
+                    time.sleep(1)
+                url = 'https://s.weibo.com/weibo?q={}&typeall=1&suball=1&timescope=custom:{}:{}&Refer=g&page={}'.format(key,beginDate.strftime("%Y-%m-%d"),date.strftime("%Y-%m-%d"),next)
+                headers = {
+                    'Cookie':cookie,
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.122 Safari/537.36',
+                }
+                weiboList = None
+                while True:
+                    try:
+                        proxies = {"http": ip}
+                        r = requests.get(url,headers = headers,proxies = proxies)
+                        soup = BeautifulSoup(r.text,'html.parser')
+                        if '抱歉，未找到“' + key + '”相关结果' in soup.get_text():
+                            break
+                        weiboList = soup.find_all('div',{'action-type':'feed_list_item'})
+                        if len(weiboList) > 0:
+                            break
+                    except:
+                        print(url)
+                        print(r.text)
+                        ip = get_new_ip()
+                        time.sleep(5)
+                if weiboList == None:
+                    print('######no weibo in'+beginDate.strftime("%Y-%m-%d") + ' to ' + date.strftime("%Y-%m-%d"))
+                    next = None
+                else:
+                    print('#######' + str(next) + '  ' + str(len(weiboList)))
+                    for weibo in weiboList:
+                        mid = str(weibo['mid']) + '#'
+                        name = weibo.find('a',{'class':'name'})['nick-name']
+                        content = weibo.find('p',{'class':'txt'}).get_text().translate(dict.fromkeys(range(0x10000, sys.maxunicode + 1), 0xfffd))
+                        createTime = re.findall('(\d*[年]?\d+月\d+日)',weibo.get_text())[0]
+                        weibo = weibo.find('div',{'class':'card-act'})
+                        try:
+                            forward = weibo.find('a',{'action-type':'feed_list_forward'}).get_text()[3:]
+                            if forward == ' ':
+                                forward = '0'
+                            comment = weibo.find('a',{'action-type':'feed_list_comment'}).get_text()[2:]
+                            if comment == ' ':
+                                comment = '0'
+                            like = weibo.find('a',{'action-type':'feed_list_like'}).find('em').get_text()
+                            if like == '':
+                                like = '0'
+                            f_csv.writerow([mid,name,createTime,content,forward,comment,like])
+                        except:
+                            print('error'+name)
+                            continue    
+                    try:
+                        test = soup.find('a',{'class':'next'})['href']
+                        next += 1
+                        if next > 50:
+                            next = None
+                    except:
+                        next = None
+            beginDate += datetime.timedelta(days=gap)
+
 def get_user_weibo(name,uid,conid,lastMonth):
     nowMonth = datetime.date.today().month
     beginMonth = (nowMonth - lastMonth -1) % 12
@@ -203,7 +275,7 @@ def get_ip():
     return ip
 
 def get_new_ip():
-    url = 'https://www.freeip.top/api/proxy_ip'
+    url = 'https://ip.jiangxianli.com/api/proxy_ip'
     r = requests.get(url)
     js = json.loads(r.text)
     return js['data']['ip']+':'+js['data']['port']
@@ -212,201 +284,11 @@ def get_new_ip():
 
 ip = get_new_ip()
 conn=MongoClient('127.0.0.1', 27017)
-#获取一个用户近n个月的所有微博
+#获取一个用户近n个月的所有微博（数据结果在mongoDB）
 #db= conn.WeiBoUser
 #get_user_weibo('YTG电竞俱乐部2','6134425922','1076036134425922',6)
-#根据关键字获取所有微博(包含评论、转发数据)
+#根据关键字获取所有微博(包含评论、转发数据)（数据结果在mongoDB）
 #db= conn.WeiBo
 #get_hotinfo_by_key('国双')
-with open('e.csv','w',newline='',encoding = 'utf-8-sig')as f:
-    f_csv = csv.writer(f)
-    header = ['mid','用户名','发文时间','内容','转发数','评论数','点赞数']
-    f_csv.writerow(header)
-    date = datetime.datetime(2020,4,2)
-    times = 200
-    while times:
-        next = 1
-        print(date.strftime("%Y-%m-%d"))
-        while next:
-            if next % 10 == 0:
-                time.sleep(1)
-            url = 'https://s.weibo.com/weibo?q=%23%20%E6%84%9F%E8%B0%A2%20%E6%9C%89%E4%BD%A0%23&typeall=1&suball=1&timescope=custom:{}:{}&Refer=g&page={}'.format(date.strftime("%Y-%m-%d"),date.strftime("%Y-%m-%d"),next)
-            headers = {
-                'Cookie': 'SINAGLOBAL=2023608972231.7717.1496907595436; login_sid_t=93b0b690122dc1de825fee0a7126e8a5; cross_origin_proto=SSL; _s_tentry=www.baidu.com; UOR=,,www.baidu.com; Apache=4873680493956.653.1585816475443; ULV=1585816475448:46:1:1:4873680493956.653.1585816475443:1583201859494; WBStorage=42212210b087ca50|undefined; WBtopGlobal_register_version=3d5b6de7399dfbdb; SCF=AmQ19DuoUQIpk7PYyXKk8DLtdiXZHKpe3fpjJF7CgfmBdposupje7xmpw3VedX_vA23gFg3oxW8DV4FNlxHDp_g.; SUB=_2A25zgdQTDeRhGedG6VQW9C3LzzuIHXVQ90LbrDV8PUNbmtAfLUqikW9NUUfuowb5eUnJo7wy6h1ABg6Es3lJUl_U; SUBP=0033WrSXqPxfM725Ws9jqgMF55529P9D9W5s8U2iDC9J14FjdmjTf4zk5JpX5KzhUgL.Fo2ReoqNSheNShM2dJLoIEnLxKqL1h5LB-2LxKML1K.L12eLxKqL1hzLBKeLxKnL1h5L1hHkxGL_; SUHB=0jBJFWt5KCHJqg; ALF=1617352642; SSOLoginState=1585816643',
-                'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.122 Safari/537.36',
-            }
-            while True:
-                try:
-                    proxies = {"http": ip}
-                    r = requests.get(url,headers = headers,proxies = proxies)
-                    soup = BeautifulSoup(r.text,'html.parser')
-                    weiboList = soup.find_all('div',{'action-type':'feed_list_item'})
-                    if len(weiboList) > 0:
-                        break
-                except:
-                    print(url)
-                    print(r.text)
-                    ip = get_new_ip()
-                    time.sleep(5)
-            print('#######' + str(next) + '  ' + str(len(weiboList)))
-            for weibo in weiboList:
-                mid = str(weibo['mid']) + '#'
-                name = weibo.find('a',{'class':'name'})['nick-name']
-                content = weibo.find('p',{'class':'txt'}).get_text().translate(dict.fromkeys(range(0x10000, sys.maxunicode + 1), 0xfffd))
-                weibo = weibo.find('div',{'class':'card-act'})
-                try:
-                    forward = weibo.find('a',{'action-type':'feed_list_forward'}).get_text()[3:]
-                    comment = weibo.find('a',{'action-type':'feed_list_comment'}).get_text()[2:]
-                    like = weibo.find('a',{'action-type':'feed_list_like'}).find('em').get_text()
-                    f_csv.writerow([mid,name,date.strftime("%Y-%m-%d"),content,forward,comment,like])
-                except:
-                    print('error'+name)
-                    continue    
-            try:
-                test = soup.find('a',{'class':'next'})['href']
-                next += 1
-                if next > 50:
-                    next = None
-            except:
-                next = None
-        date += datetime.timedelta(days=-1)
-        times -= 1
-
-'''
-# 基本信息
-url = 'https://m.weibo.cn/api/container/getIndex?containerid=100103type%3D60%26q%3D%E7%89%9B%E5%A5%B6%26t%3D0&title=%E7%83%AD%E9%97%A8-%E7%89%9B%E5%A5%B6&cardid=weibo_page&extparam=title%3D%E7%83%AD%E9%97%A8%26mid%3D%26q%3D%E7%89%9B%E5%A5%B6&luicode=10000011&lfid=100103type%3D1%26q%3D%E7%89%9B%E5%A5%B6'
-headers = {
-    'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/78.0.3904.108 Safari/537.36',
-}
-r = requests.get(url,headers)
-js = json.loads(r.text)
-weibo_list = js['data']['cards']
-for weibo in weibo_list:
-    mblog = weibo['mblog']
-    weiboid = mblog['id']
-    time = mblog['created_at']
-    likeNum = mblog['attitudes_count']
-    commentNum = mblog['comments_count']
-    repostNum = mblog['reposts_count']
-    user = mblog['user']
-    uid = user['id']
-    uname = user['screen_name']
-    followNum = user['follow_count']
-    followerNum = user['followers_count']
-    statusNum = user['statuses_count']
-'''
-'''
-# 转发信息
-url = 'https://m.weibo.cn/api/statuses/repostTimeline?id=4443618645304108&page=1'
-headers = {
-    'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/78.0.3904.108 Safari/537.36',
-}
-r = requests.get(url,headers)
-js = json.loads(r.text)
-repost_list = js['data']['data']
-for repost in repost_list:
-    weiboid = repost['id']
-    content = repost['raw_text']
-    time = repost['created_at']
-    likeNum = repost['attitudes_count']
-    commentNum = repost['comments_count']
-    repostNum = repost['reposts_count']
-    user = repost['user']
-    uname = user['screen_name']
-    followNum = user['follow_count']
-    followerNum = user['followers_count']
-    statusNum = user['statuses_count']
-'''
-'''
-# 评论信息
-url = 'https://m.weibo.cn/comments/hotflow?id=4443618645304108&mid=4443618645304108&max_id=0&max_id_type=0'
-headers = {
-    'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/78.0.3904.108 Safari/537.36',
-}
-r = requests.get(url,headers)
-js = json.loads(r.text)
-comment_list = js['data']['data']
-for comment in comment_list:
-    commentid = comment['id']
-    content = comment['text']
-    time = comment['created_at']
-    likeNum = comment['like_count']
-    commentNum = comment['total_number']
-    user = comment['user']
-    uname = user['screen_name']
-    followNum = user['follow_count']
-    followerNum = user['followers_count']
-    statusNum = user['statuses_count']
-'''
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-'''
-def get_user_info():
-    url = 'https://m.weibo.cn/api/container/getIndex?type=uid&value=1112928761&containerid=1005051112928761'
-    #headerStr = b'user-agent: Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/78.0.3904.108 Safari/537.36'
-    headers = headers_raw_to_dict(headerStr)
-    r = requests.get(url,headers = headers)
-    js = json.loads(r.text)
-    follow = js['data']['userInfo']['follow_count']
-    follower = js['data']['userInfo']['followers_count']
-    status = js['data']['userInfo']['statuses_count']
-    return
-
-def get_weiboList_by_key():
-    url = 'https://s.weibo.com/weibo?q=%E8%92%99%E7%89%9B&xsort=hot&Refer=hotmore&page=2'
-    headerStr = b'''
-'''
-    Cookie: SINAGLOBAL=2023608972231.7717.1496907595436; login_sid_t=77f4a81063941d07c7fb685fd20094fb; cross_origin_proto=SSL; _s_tentry=www.baidu.com; UOR=,,www.baidu.com; Apache=8020134530361.569.1575009664127; ULV=1575009664132:36:4:3:8020134530361.569.1575009664127:1575005835702; WBtopGlobal_register_version=307744aa77dd5677; SCF=AmQ19DuoUQIpk7PYyXKk8DLtdiXZHKpe3fpjJF7CgfmBEOAQORJySFX2qkf0U3WMuLlk_llsNn9rLOr2QeqZTjA.; SUB=_2A25w5M7mDeRhGedG6VQW9C3LzzuIHXVTk6curDV8PUNbmtAKLWX-kW9NUUfuow7n0cTA8X81FbF4Ocgndq52_hXf; SUBP=0033WrSXqPxfM725Ws9jqgMF55529P9D9W5s8U2iDC9J14FjdmjTf4zk5JpX5KzhUgL.Fo2ReoqNSheNShM2dJLoIEnLxKqL1h5LB-2LxKML1K.L12eLxKqL1hzLBKeLxKnL1h5L1hHkxGL_; SUHB=0U1IEVVY4E7uGt; ALF=1606545974; SSOLoginState=1575009974; WBStorage=42212210b087ca50|undefined
-    User-Agent: Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/78.0.3904.108 Safari/537.36
-    '''
-'''
-    headers = headers_raw_to_dict(headerStr)
-    r = requests.get(url,headers = headers)
-    soup = BeautifulSoup(r.text,'html.parser')
-    weibo_list = soup.find_all('div',{'action-type':'feed_list_item'})
-    return weibo_list
-
-def get_weibo(weibo):
-    non_bmp_map = dict.fromkeys(range(0x10000, sys.maxunicode + 1), 0xfffd)
-    weibo_name = weibo.find('a',{"class":"name"})
-    print(weibo_name['nick-name'])
-    print(weibo_name['href'][2:])
-    weibo_content = weibo.find('p',{'node-type':'feed_list_content'})
-    print(weibo_content.get_text().translate(non_bmp_map))
-    forward = weibo.find('a',{'action-type':'feed_list_forward'}).get_text()
-    comment = weibo.find('a',{'action-type':'feed_list_comment'}).get_text()
-    like = weibo.find('a',{'title':'赞'}).get_text()
-    print(forward[3:].strip())
-    print(comment[3:].strip())
-    print(like.strip())
-    return
-'''
+#根据关键字获取指定时间内的所有微博（每天最多50页+只包含互动量数据）（数据结果在“关键字.csv")
+#get_weibo_by_key_time(key=key,beginDate=datetime.datetime(2020,2,20),endDate=datetime.datetime(2020,4,26),gap=1,cookie = "SINAGLOBAL=2023608972231.7717.1496907595436; _s_tentry=passport.weibo.com; Apache=5892249541863.881.1586318050553; ULV=1586318050594:47:2:1:5892249541863.881.1586318050553:1585816475448; login_sid_t=68403f793c0bf36f182537a3305adb76; cross_origin_proto=SSL; SSOLoginState=1588131931; un=damon_dym@163.com; SUBP=0033WrSXqPxfM725Ws9jqgMF55529P9D9W5KvlnH70YE8OXQn19HpUnb5JpX5KMhUgL.FoMXe0zcSK-ceh22dJLoIEXLxKnLBKqL1h2LxK-L1K2LB.BLxK-L1K-L122LxKnLBKqL1h2LxK-L1K2LB.Bt; ALF=1619761077; SCF=AmQ19DuoUQIpk7PYyXKk8DLtdiXZHKpe3fpjJF7CgfmBLZLjWtmQ-u2OHvVnNzvOuF-GOe65UxpInxWnwNvQ5Bw.; SUB=_2A25zrhQTDeRhGeFK6FAX9SvKyz2IHXVQ2gLbrDV8PUNbmtANLVDBkW9NQ2YicUtEUr8SoNuE1DPGjfEdXX3EkuEu; SUHB=010WfjB77eURwR; wvr=6; UOR=,,login.sina.com.cn; webim_unReadCount=%7B%22time%22%3A1588225271252%2C%22dm_pub_total%22%3A0%2C%22chat_group_client%22%3A0%2C%22chat_group_notice%22%3A0%2C%22allcountNum%22%3A38%2C%22msgbox%22%3A0%7D")

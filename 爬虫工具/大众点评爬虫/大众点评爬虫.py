@@ -184,42 +184,18 @@ def get_ip():
     ip = re.findall('([\d\.\:]+)<br>?',r.text)
     return ip
 
-
+outputFileName = 'xxx.csv'
 canteenUrl = 'http://www.dianping.com/shop/92149656/review_all'
+cookie = 'xxx'
 headers = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/78.0.3904.108 Safari/537.36',   
-        'Cookie': '_lxsdk_cuid=16662acc2dec8-079acf4d80b782-333b5602-1fa400-16662acc2dfc8; _lxsdk=16662acc2dec8-079acf4d80b782-333b5602-1fa400-16662acc2dfc8; cy=4; cye=guangzhou; _hc.v=e6a81fa2-34e8-30df-e4e1-bce316165889.1576806828; _dp.ac.v=d0e06310-d02a-4203-9ba6-8affab00b71b; ua=15013216710; s_ViewType=10; cityid=4; default_ab=shop%3AA%3A5; ctu=7926b9869ae6b89b8e06e031a2e402762c8e97d446f37d239335cb1e8d901485; _lx_utm=utm_source%3DBaidu%26utm_medium%3Dorganic; dper=f912b5c4be8182a0e7edcbbb1487725f58824ff12efc2fb899bc7e4fd892fbe9fbccc23d0d783757df7194c68c72558d856deaa8cbf73790aba11c28aa9ee635f5fd117efc65e0773fe634f30151ca96f577f06d687a2107e4ef4c076c16fa1d; ll=7fd06e815b796be3df069dec7836c3df; _lxsdk_s=16f3fe5e84d-86c-e80-d6e%7C%7C1042'
+        'Cookie':cookie
         }
-with open('e.csv','w',newline='',encoding = 'utf-8-sig')as f:
+with open(outputFileName,'w',newline='',encoding = 'utf-8-sig')as f:
     f_csv = csv.writer(f)
     header = ['餐厅名','评论url','用户名','用户等级','是否VIP','评论时间','综合评分','口味','环境','服务',
               '评论内容','点赞数','回应数','推荐菜','','','','','']
     f_csv.writerow(header)
     get_shop_comment(canteenUrl,f_csv)
-    '''
-    key = ''
-    url = 'http://www.dianping.com/search/keyword/4/0_{}/o3'.format(key)
-    while True:
-        print('######################' + url[-5:])
-        r = requests.get(url,headers = headers)
-        soup = BeautifulSoup(r.text,'html.parser')
-        idList = soup.find_all('a',{'data-click-name':'shop_title_click'})
-        for id in idList:
-            print('##########################' + id['title'])
-            shopid = id['data-shopid']
-            newUrl = 'http://www.dianping.com/shop/{}/review_all'.format(shopid)
-            get_shop_comment(newUrl,f_csv,id['title'])
-        url = soup.find('a',{'class':'next'})['href']
-    '''
-'''
-r = requests.get(url,headers=headers)
-rl = re.findall('.z[a-zA-Z0-9]{4,5}.*?round:.*?px -(.*?)px;',r.text)
-r1 = [float(i) for i in rl]
-print(len(rl))
-r1.sort()
-r2 = {}
-for i in set(rl):
-    r2[i] = rl.count(i)
-print(r2)
-'''
+
 
